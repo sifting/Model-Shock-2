@@ -1,7 +1,11 @@
 #include "animator.h"
 
 Animator::Animator()
-    : _skel (nullptr)
+    : head_yaw (0)
+    , head_pitch (0)
+    , body_yaw (0)
+    , body_pitch (0)
+    , _skel (nullptr)
     , _anim (nullptr)
     , _speed (1.0)
 {
@@ -53,6 +57,11 @@ void Animator::bindpose (Matrix *pose, uint32_t num)
         }
 
         Matrix tmp = Matrix::from_rotation_position (r, t);
+        if (9 == i)
+        {
+            auto mod = Matrix::from_angles (body_yaw, body_pitch, 0);
+            tmp = mod*tmp;
+        }
         pose[index.id] = pose[index.parent]*tmp;
     }
 }

@@ -6,6 +6,7 @@
 class Matrix
 {
 public:
+    static Matrix from_angles (float yaw, float pitch, float roll);
     static Matrix from_rotation (const Vector& r);
     static Matrix from_rotation_position (const Vector& r, const Vector& p);
     static Matrix from_perspective (float fov, float aspect);
@@ -120,6 +121,28 @@ inline bool operator!= (const Matrix& a, const Matrix& b)
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
 }
 
+inline Matrix Matrix::from_angles (float yaw, float pitch, float roll)
+{
+    const float pi = 3.141592;
+    float cy, cp, cr;
+    float sy, sp, sr;
+    float a, b, c, d;
+
+    sincosf (pi*yaw/360.0, &sy, &cy);
+    sincosf (pi*pitch/360.0, &sp, &cp);
+    sincosf (pi*roll/360.0, &sr, &cr);
+
+    a = sy*cr;
+    b = sy*sr;
+    c = cy*cr;
+    d = cy*sr;
+
+    return Matrix (
+                Vector ( cy*cp,-a + d*sp, b + c*sp, 0),
+                Vector ( sy*cp, c + b*sp,-d + a*sp, 0),
+                Vector (   -sp,    cp*sr,    cp*cr, 0),
+                Vector (     0,        0,        0, 1));
+}
 inline Matrix Matrix::from_perspective (float fov, float aspect)
 {
     float y = 1.0/tanf (3.141592*fov/360.0);

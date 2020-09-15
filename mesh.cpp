@@ -1,8 +1,158 @@
 #include <fstream>
+#include <cstring>
+#include <unordered_map>
 #include "mesh.h"
 
-Mesh *
-Mesh::from_file (std::string& prefix)
+Model *
+Model::from_file (std::string& path)
 {
-    return nullptr;
+    FILE *fp = fopen (path.c_str (), "rb");
+    if (!fp)
+    {
+        return nullptr;
+    }
+
+    Header h;
+    fread (&h, 1, sizeof (h), fp);
+    if (memcmp ("LGMM", h.id, 4) != 0)
+    {
+        return nullptr;
+    }
+    if (h.version != 2)
+    {
+        return nullptr;
+    }
+
+    auto mats = new Material[h.nmats];
+    fseek (fp, h.mats, SEEK_SET);
+    fread (mats, sizeof (mats[0]), h.nmats, fp);
+
+    auto tris = new Tri[h.ntris];
+    fseek (fp, h.tris, SEEK_SET);
+    fread (tris, sizeof (tris[0]), h.ntris, fp);
+
+    auto verts = new float[3*h.nverts];
+    fseek (fp, h.points, SEEK_SET);
+    fread (verts, sizeof (verts[0]), 3*h.nverts, fp);
+
+    auto uvs = new UV[h.nverts];
+    fseek (fp, h.uvs, SEEK_SET);
+    fread (uvs, sizeof (uvs[0]), h.nverts, fp);
+
+    auto chunks = new Chunk[h.nchunks];
+    fseek (fp, h.chunks, SEEK_SET);
+    fread (chunks, sizeof (chunks[0]), h.nchunks, fp);
+    fclose (fp);
+
+    /*Digest materials into something usable*/
+    auto mymats = new MyMaterial[h.nmats];
+    for (auto i = 0u; i < h.nmats; i++)
+    {
+        MyMaterial *mat = mymats + i;
+        mat->alpha = mats[i].alpha;
+        mat->emissive = mats[i].emissive;
+    }
+
+    /*Digest model data into something usable*/
+    auto mesh = new Mesh[h.nmats];
+    auto i2v = new int32_t[h.nverts];
+    auto v2i = new int32_t[h.nverts];
+    for (auto i = 0u; i < h.nmats; i++)
+    {
+        uint32_t nverts = 0;
+        uint32_t nindices = 0;
+        for (auto j = 0u; j < h.nverts; j++)
+        {
+            i2v[j] = -1;
+            v2i[j] = -1;
+        }
+
+        /*Count and remap index values*/
+        for (auto j = 0u; j < h.ntris; j++)
+        {
+            Tri *t = tris + j;
+            if (t->slot != i)
+            {
+                continue;
+            }
+            for (auto k = 0u; k < 3; k++)
+            {
+                if (i2v[t->indices[k]] != -1)
+                {
+                    continue;
+                }
+                i2v[t->indices[k]] = nverts;
+                v2i[nverts] = t->indices[k];
+                nverts++;
+            }
+            nindices += 3;
+        }
+
+        /*Create canonical vertex from LGS format*/
+        mesh[i].verts = new Vertex[nverts];
+        for (auto j = 0u; j < nverts; j++)
+        {
+            uint32_t index = v2i[j];
+            Vertex *v = mesh[i].verts + j;
+            const float *xyz = verts + 3*index;
+            const UV *uv = uvs + index;
+            v->xyz[0] = xyz[0];
+            v->xyz[1] = xyz[1];
+            v->xyz[2] = xyz[2];
+            /*30 bit normals, 10 bits each component*/
+            v->nom[0] = ((uv->n>>22)&0x3ff)/512.0 - 1.0;
+            v->nom[1] = ((uv->n>>12)&0x3ff)/512.0 - 1.0;
+            v->nom[2] = ((uv->n>>2)&0x3ff)/512.0 - 1.0;
+            v->uv[0] = uv->u;
+            v->uv[1] = uv->v;
+        }
+
+        /*Create remapped indices*/
+        mesh[i].indices = new uint16_t[nindices];
+        uint32_t index = 0;
+        for (auto j = 0u; j < h.ntris; j++)
+        {
+            Tri *t = tris + j;
+            if (t->slot != i)
+            {
+                continue;
+            }
+            mesh[i].indices[index + 0] = i2v[t->indices[0]];
+            mesh[i].indices[index + 1] = i2v[t->indices[1]];
+            mesh[i].indices[index + 2] = i2v[t->indices[2]];
+            index += 3;
+        }
+
+        /*Assign parent bone*/
+        for (auto j = 0u; j < h.nchunks; j++)
+        {
+            Chunk *c = chunks + j;
+            for (auto k = 0u; k < c->nverts; k++)
+            {
+                mesh[i].verts[i2v[c->verts + k]].id = c->bone;
+            }
+        }
+
+        /*Assign material slot*/
+        mesh[i].slot = i;
+        mesh[i].nverts = nverts;
+        mesh[i].nindices = nindices;
+    }
+
+    auto mdl = new Model;
+    mdl->_nmaterials = h.nmats;
+    mdl->_nmeshes = h.nmats;
+    mdl->_materials = mymats;
+    mdl->_meshes = mesh;
+
+    /*Clean up work area*/
+    delete [] i2v;
+    delete [] v2i;
+    delete [] chunks;
+    delete [] uvs;
+    delete [] verts;
+    delete [] tris;
+    delete [] mats;
+
+    return mdl;
 }

@@ -1,6 +1,8 @@
 #include <QtWidgets>
+#include <QSplitter>
 #include "mainwindow.h"
 #include "viewport.h"
+#include "mesh.h"
 #include "skel.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -68,6 +70,51 @@ MainWindow::MainWindow(QWidget *parent)
         side->addWidget(group);
     }
     {
+        auto hy = new QSlider ();
+        hy->setOrientation(Qt::Orientation::Horizontal);
+        hy->setMinimum (-90);
+        hy->setMaximum ( 90);
+        hy->setValue (0);
+
+        auto hp = new QSlider ();
+        hp->setOrientation(Qt::Orientation::Horizontal);
+        hp->setMinimum (-90);
+        hp->setMaximum ( 90);
+        hp->setValue (0);
+
+        auto head = new QLabel ();
+        head->setText ("Head");
+
+        auto by = new QSlider ();
+        by->setOrientation(Qt::Orientation::Horizontal);
+        by->setMinimum (-90);
+        by->setMaximum ( 90);
+        by->setValue (0);
+        connect (by, &QSlider::valueChanged, this, &MainWindow::bodyyaw);
+
+        auto bp = new QSlider ();
+        bp->setOrientation(Qt::Orientation::Horizontal);
+        bp->setMinimum (-90);
+        bp->setMaximum ( 90);
+        bp->setValue (0);
+        connect (bp, &QSlider::valueChanged, this, &MainWindow::bodypitch);
+
+        auto body = new QLabel ();
+        body->setText ("Body");
+
+        auto tmp = new QVBoxLayout ();
+        auto group = new QGroupBox ("Controllers");
+        tmp->addWidget (head);
+        tmp->addWidget (hy);
+        tmp->addWidget (hp);
+        tmp->addWidget (body);
+        tmp->addWidget (by);
+        tmp->addWidget (bp);
+
+        group->setLayout (tmp);
+        side->addWidget(group);
+    }
+    {
         auto anims = new QComboBox ();
         auto al = new QLabel ();
         al->setText ("Animation Cycle");
@@ -110,24 +157,17 @@ MainWindow::MainWindow(QWidget *parent)
         group->setLayout (tmp);
         side->addWidget(group);
     }
+
     auto adaptor2 = new QWidget ();
     adaptor2->setLayout (side);
 
     _vp = new Viewport (parent);
 
-    _root = new QHBoxLayout;
-    _root->setMargin(0);
-    _root->setSpacing(0);
-
+    _root = new QSplitter;
     _root->addWidget (_vp);
-    _root->setStretchFactor(_vp, 4);
     _root->addWidget (adaptor2);
-    _root->setStretchFactor(adaptor2, 1);
 
-    auto adaptor = new QWidget ();
-    adaptor->setLayout (_root);
-
-    setCentralWidget(adaptor);
+    setCentralWidget(_root);
     setWindowTitle ("Model Shock 2");
     setMinimumSize (800, 600);
 }
@@ -138,19 +178,32 @@ MainWindow::~MainWindow()
 
 void MainWindow::open ()
 {
-    auto fn = QFileDialog::getOpenFileName(this, "Select a model or animation", "", "*.cal;*.mc");
+    auto fn = QFileDialog::getOpenFileName(
+                this,
+                "Select a model or animation",
+                "",
+                "*.bin;*.mc");
     auto fi = QFileInfo (fn);
-    auto tmp = fn.toStdString ();
     auto ext = fi.suffix ().toLower ();
-    if ("cal" == ext)
+    auto prefix = QDir (fi.dir ().path ()
+                        + "/"
+                        + fi.completeBaseName ()).path ();
+    if ("bin" == ext)
     {
-        auto skel = Skel::from_file (tmp);
-        _skel_mdl->set_skel (skel);
+        auto bin = (prefix + ".bin").toStdString ();
+        auto mdl = Model::from_file (bin);
+        g_scene->set_model (mdl);
+
+        auto cal = (prefix + ".cal").toStdString ();
+        auto skel = Skel::from_file (cal);
         g_scene->animator ()->set_skel (skel);
         g_scene->set_skel (skel);
+
+        _skel_mdl->set_skel (skel);
     }
     else if ("mc" == ext)
     {
+        auto tmp = fn.toStdString ();
         auto anim = Anim::from_file (tmp);
         g_scene->animator ()->set_anim (anim);
         g_scene->add_anim (anim);
@@ -186,4 +239,12 @@ void MainWindow::toggled ()
     if (!_paused) _toggle->setText ("Resume");
     else _toggle->setText ("Pause");
     _paused = !_paused;
+}
+void MainWindow::bodyyaw (int value)
+{
+    g_scene->animator ()->body_yaw = (float)value;
+}
+void MainWindow::bodypitch (int value)
+{
+    g_scene->animator ()->body_pitch = (float)value;
 }

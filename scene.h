@@ -1,6 +1,7 @@
 #ifndef SCENE_H
 #define SCENE_H
 
+#include "mesh.h"
 #include "skel.h"
 #include "anim.h"
 #include "animator.h"
@@ -12,6 +13,8 @@ public:
     Scene();
     ~Scene ();
 
+    void set_model (Model *model) {_model = model;}
+
     void set_skel (Skel *skel) {_skel = skel;}
     Skel *skel () {return _skel;}
     Animator *animator () {return _animator;}
@@ -21,6 +24,7 @@ public:
 
 private:
     Skel *_skel;
+    Model *_model;
     Animator *_animator;
     std::vector<Anim *> _anims;
 };

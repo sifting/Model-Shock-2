@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QSplitter>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QTreeView>
@@ -27,9 +28,11 @@ private slots:
     void rtdraw ();
     void speedchange (int value);
     void toggled ();
+    void bodyyaw (int value);
+    void bodypitch (int value);
 
 private:
-    QHBoxLayout *_root;
+    QSplitter *_root;
     QSlider *_playback;
     QSlider *_speed;
     QPushButton *_toggle;

@@ -20,6 +20,12 @@ public:
     void bindpose (Matrix *pose, uint32_t num);
     void pose (Matrix *pose, uint32_t num);
 
+public:
+    float head_yaw;
+    float head_pitch;
+    float body_yaw;
+    float body_pitch;
+
 private:
     Skel *_skel;
     Anim *_anim;
