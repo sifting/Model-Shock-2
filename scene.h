@@ -14,9 +14,11 @@ public:
     ~Scene ();
 
     void set_model (Model *model) {_model = model;}
+    Model *model () {return _model;}
 
     void set_skel (Skel *skel) {_skel = skel;}
     Skel *skel () {return _skel;}
+
     Animator *animator () {return _animator;}
 
     void add_anim (Anim *anim) {_anims.push_back (anim);}

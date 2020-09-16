@@ -190,16 +190,18 @@ void MainWindow::open ()
                         + fi.completeBaseName ()).path ();
     if ("bin" == ext)
     {
-        auto bin = (prefix + ".bin").toStdString ();
-        auto mdl = Model::from_file (bin);
-        g_scene->set_model (mdl);
-
         auto cal = (prefix + ".cal").toStdString ();
         auto skel = Skel::from_file (cal);
         g_scene->animator ()->set_skel (skel);
         g_scene->set_skel (skel);
 
+        auto tex = fi.dir ().path ().toStdString ();
+        auto bin = (prefix + ".bin").toStdString ();
+        auto mdl = Model::from_file (bin, tex, skel);
+        g_scene->set_model (mdl);
+
         _skel_mdl->set_skel (skel);
+        _vp->mark_dirty ();
     }
     else if ("mc" == ext)
     {

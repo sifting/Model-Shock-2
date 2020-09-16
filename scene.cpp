@@ -4,6 +4,7 @@ Scene *g_scene;
 
 Scene::Scene()
     : _skel (nullptr)
+    , _model (nullptr)
     , _animator (new Animator ())
 {
     g_scene = this;

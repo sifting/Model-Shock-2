@@ -4,7 +4,7 @@
 #include "mesh.h"
 
 Model *
-Model::from_file (std::string& path)
+Model::from_file (std::string& path, std::string& prefix, Skel *skel)
 {
     FILE *fp = fopen (path.c_str (), "rb");
     if (!fp)
@@ -22,6 +22,14 @@ Model::from_file (std::string& path)
     {
         return nullptr;
     }
+
+    auto map = new uint8_t[2*h.nsegs];
+    fseek (fp, h.map, SEEK_SET);
+    fread (map, sizeof (map[0]), 2*h.nsegs, fp);
+
+    auto segs = new Segment[h.nsegs];
+    fseek (fp, h.segs, SEEK_SET);
+    fread (segs, sizeof (segs[0]), h.nsegs, fp);
 
     auto mats = new Material[h.nmats];
     fseek (fp, h.mats, SEEK_SET);
@@ -45,16 +53,18 @@ Model::from_file (std::string& path)
     fclose (fp);
 
     /*Digest materials into something usable*/
-    auto mymats = new MyMaterial[h.nmats];
+    std::vector<MyMaterial *> mymats;
     for (auto i = 0u; i < h.nmats; i++)
     {
-        MyMaterial *mat = mymats + i;
+        MyMaterial *mat = new MyMaterial;
+        mat->path = prefix + "/txt16/" + mats[i].name;
         mat->alpha = mats[i].alpha;
         mat->emissive = mats[i].emissive;
+        mymats.push_back (mat);
     }
 
     /*Digest model data into something usable*/
-    auto mesh = new Mesh[h.nmats];
+    std::vector<Mesh *> meshes;
     auto i2v = new int32_t[h.nverts];
     auto v2i = new int32_t[h.nverts];
     for (auto i = 0u; i < h.nmats; i++)
@@ -89,11 +99,12 @@ Model::from_file (std::string& path)
         }
 
         /*Create canonical vertex from LGS format*/
-        mesh[i].verts = new Vertex[nverts];
+        auto mesh = new Mesh;
+        mesh->verts = new Vertex[nverts];
         for (auto j = 0u; j < nverts; j++)
         {
             uint32_t index = v2i[j];
-            Vertex *v = mesh[i].verts + j;
+            Vertex *v = mesh->verts + j;
             const float *xyz = verts + 3*index;
             const UV *uv = uvs + index;
             v->xyz[0] = xyz[0];
@@ -108,7 +119,7 @@ Model::from_file (std::string& path)
         }
 
         /*Create remapped indices*/
-        mesh[i].indices = new uint16_t[nindices];
+        mesh->indices = new uint16_t[nindices];
         uint32_t index = 0;
         for (auto j = 0u; j < h.ntris; j++)
         {
@@ -117,9 +128,9 @@ Model::from_file (std::string& path)
             {
                 continue;
             }
-            mesh[i].indices[index + 0] = i2v[t->indices[0]];
-            mesh[i].indices[index + 1] = i2v[t->indices[1]];
-            mesh[i].indices[index + 2] = i2v[t->indices[2]];
+            mesh->indices[index + 0] = i2v[t->indices[0]];
+            mesh->indices[index + 1] = i2v[t->indices[1]];
+            mesh->indices[index + 2] = i2v[t->indices[2]];
             index += 3;
         }
 
@@ -127,23 +138,33 @@ Model::from_file (std::string& path)
         for (auto j = 0u; j < h.nchunks; j++)
         {
             Chunk *c = chunks + j;
+            uint8_t *remap = map + h.nsegs;
             for (auto k = 0u; k < c->nverts; k++)
             {
-                mesh[i].verts[i2v[c->verts + k]].id = c->bone;
+                uint32_t n = 0;
+                for (auto& b : skel->bones ())
+                {
+                    if (b->handle == segs[c->bone].id)
+                    {
+                        break;
+                    }
+                    n++;
+                }
+                mesh->verts[i2v[c->verts + k]].id = n;
             }
         }
 
         /*Assign material slot*/
-        mesh[i].slot = i;
-        mesh[i].nverts = nverts;
-        mesh[i].nindices = nindices;
+        mesh->slot = i;
+        mesh->nverts = nverts;
+        mesh->nindices = nindices;
+        /*Add to mesh list*/
+        meshes.push_back (mesh);
     }
 
     auto mdl = new Model;
-    mdl->_nmaterials = h.nmats;
-    mdl->_nmeshes = h.nmats;
     mdl->_materials = mymats;
-    mdl->_meshes = mesh;
+    mdl->_meshes = meshes;
 
     /*Clean up work area*/
     delete [] i2v;

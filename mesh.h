@@ -3,13 +3,15 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
+#include "skel.h"
 
 class Model
 {
 public:
     struct MyMaterial
     {
-        void *data;
+        std::string path;
         float alpha;
         float emissive;
     };
@@ -29,25 +31,23 @@ public:
         uint32_t nindices;
     };
 
-    static Model *from_file (std::string& path);
+    static Model *from_file (std::string& path, std::string& prefix, Skel *skel);
+
     ~Model ()
     {
-        for (auto i = 0u; i < _nmeshes; i++)
+        for (auto& mesh : _meshes)
         {
-            auto mesh = _meshes + i;
             delete [] mesh->verts;
             delete [] mesh->indices;
         }
-        delete [] _meshes;
-        delete [] _materials;
     }
 
+    std::vector<MyMaterial *>& materials () {return _materials;}
+    std::vector<Mesh *>& meshes () {return _meshes;}
 private:
     explicit Model() {};
-    uint32_t _nmaterials;
-    uint32_t _nmeshes;
-    MyMaterial *_materials;
-    Mesh *_meshes;
+    std::vector<MyMaterial *> _materials;
+    std::vector<Mesh *> _meshes;
 
 private: /*Dark structs*/
     struct Header
@@ -76,6 +76,15 @@ private: /*Dark structs*/
         uint32_t points;
         uint32_t uvs;
         uint32_t unk6;
+    };
+    struct Segment
+    {
+        uint32_t unk1;
+        uint8_t id;
+        uint8_t unk2;
+        uint8_t unk3;
+        uint8_t unk4;
+        uint32_t unk5[3];
     };
     struct Chunk
     {
