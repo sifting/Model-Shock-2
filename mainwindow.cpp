@@ -75,12 +75,14 @@ MainWindow::MainWindow(QWidget *parent)
         hy->setMinimum (-90);
         hy->setMaximum ( 90);
         hy->setValue (0);
+        connect (hy, &QSlider::valueChanged, this, &MainWindow::headyaw);
 
         auto hp = new QSlider ();
         hp->setOrientation(Qt::Orientation::Horizontal);
         hp->setMinimum (-90);
         hp->setMaximum ( 90);
         hp->setValue (0);
+        connect (hp, &QSlider::valueChanged, this, &MainWindow::headpitch);
 
         auto head = new QLabel ();
         head->setText ("Head");
@@ -182,7 +184,7 @@ void MainWindow::open ()
                 this,
                 "Select a model or animation",
                 "",
-                "*.bin;*.mc");
+                "*.bin;*.mi");
     auto fi = QFileInfo (fn);
     auto ext = fi.suffix ().toLower ();
     auto prefix = QDir (fi.dir ().path ()
@@ -203,10 +205,14 @@ void MainWindow::open ()
         _skel_mdl->set_skel (skel);
         _vp->mark_dirty ();
     }
-    else if ("mc" == ext)
+    else if ("mi" == ext)
     {
-        auto tmp = fn.toStdString ();
-        auto anim = Anim::from_file (tmp);
+        if (!g_scene->skel ())
+        {
+            return;
+        }
+        auto tmp = prefix.toStdString ();
+        auto anim = Anim::from_file (tmp, g_scene->skel ());
         g_scene->animator ()->set_anim (anim);
         g_scene->add_anim (anim);
     }
@@ -249,4 +255,12 @@ void MainWindow::bodyyaw (int value)
 void MainWindow::bodypitch (int value)
 {
     g_scene->animator ()->body_pitch = (float)value;
+}
+void MainWindow::headyaw (int value)
+{
+    g_scene->animator ()->head_yaw = (float)value;
+}
+void MainWindow::headpitch (int value)
+{
+    g_scene->animator ()->head_pitch = (float)value;
 }

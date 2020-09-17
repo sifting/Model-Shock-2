@@ -62,6 +62,11 @@ void Animator::bindpose (Matrix *pose, uint32_t num)
             auto mod = Matrix::from_angles (body_yaw, body_pitch, 0);
             tmp = mod*tmp;
         }
+        if (10 == i)
+        {
+            auto mod = Matrix::from_angles (head_yaw, head_pitch, 0);
+            tmp = mod*tmp;
+        }
         pose[index.id] = pose[index.parent]*tmp;
     }
 }
@@ -76,8 +81,43 @@ void Animator::pose (Matrix *pose, uint32_t num)
         return;
     }
 
-    if (num <= _skel->bones ().size ())
+    auto& bones = _skel->bones ();
+    if (num <= bones.size ())
     {
         return;
+    }
+
+    uint32_t frame = _anim->frame_from_time (_time);
+
+    auto& indices = _skel->indices ();
+    for (auto i = 0u; i < bones.size (); i++)
+    {
+        auto& index = indices[i];
+        auto r = Vector (0, 0, 0, 1);
+        auto t = Vector (bones[index.id]->t[0],
+                         bones[index.id]->t[1],
+                         bones[index.id]->t[2],
+                         1.0);
+        if (0 == i)
+        {
+            //t += _anim->position ()[frame];
+        }
+        else
+        {
+            auto keys = _anim->rotation ()[_anim->remap[bones[index.id]->handle]];
+            if (nullptr != keys)
+            {
+                r = keys[frame];
+            }
+        }
+
+        if (index.parent < 0)
+        {
+            pose[index.id] = Matrix::from_rotation_position (r, t);
+            continue;
+        }
+
+        Matrix tmp = Matrix::from_rotation_position (r, t);
+        pose[index.id] = pose[index.parent]*tmp;
     }
 }

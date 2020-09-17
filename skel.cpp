@@ -4,6 +4,10 @@
 #include <cstring>
 #include "skel.h"
 
+static const char *_biped[] = {
+
+};
+
 Skel::~Skel ()
 {
     for (auto b : _bones)

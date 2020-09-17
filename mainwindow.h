@@ -30,6 +30,8 @@ private slots:
     void toggled ();
     void bodyyaw (int value);
     void bodypitch (int value);
+    void headyaw (int value);
+    void headpitch (int value);
 
 private:
     QSplitter *_root;

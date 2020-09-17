@@ -117,7 +117,7 @@ void Viewport::initializeGL ()
 void Viewport::draw ()
 {
     glClearColor (_colour[0], _colour[1], _colour[2], 1.0);
-    glClear (GL_COLOR_BUFFER_BIT);
+    glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     /*Upload data if it's been changed*/
     if (_dirty)
     {
@@ -195,7 +195,11 @@ void Viewport::draw ()
     Matrix pmv = _proj*mdl*flip;
 
     Matrix pose[64];
-    g_scene->animator ()->bindpose (pose, 64);
+    g_scene->animator ()->advance (0.04);
+    if (g_scene->animator ()->anim ())
+        g_scene->animator ()->pose (pose, 64);
+    else
+        g_scene->animator ()->bindpose (pose, 64);
 
     if (g_scene->model () != nullptr)
     {
@@ -241,10 +245,12 @@ void Viewport::draw ()
         auto id = glGetUniformLocation (_simple, "pmv");
         glUniformMatrix4fv (id, 1, GL_TRUE, pmv.as_ptr ());
 
+        //glDisable (GL_DEPTH_TEST);
         glBindVertexArray (_skel_vao);
         glBindBuffer (GL_ARRAY_BUFFER, _skel);
         glBufferData (GL_ARRAY_BUFFER, sizeof (Vector)*pts.size (), pts.data (), GL_DYNAMIC_DRAW);
         glDrawArrays (GL_LINES, 0, pts.size ());
+       // glEnable (GL_DEPTH_TEST);
     }
 
     if (glGetError () != GL_NO_ERROR)

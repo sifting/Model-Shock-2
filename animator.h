@@ -12,6 +12,7 @@ public:
 
     void set_skel (Skel *skel) {_skel = skel;}
     void set_anim (Anim *anim) {_anim = anim;}
+    Anim *anim () {return _anim;}
 
     void set_speed (float speed) {_speed = speed;}
     float speed () {return _speed;}
