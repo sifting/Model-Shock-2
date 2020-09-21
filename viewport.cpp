@@ -195,7 +195,7 @@ void Viewport::draw ()
     Matrix pmv = _proj*mdl*flip;
 
     Matrix pose[64];
-    g_scene->animator ()->advance (0.04);
+    g_scene->animator ()->advance (0.01);
     if (g_scene->animator ()->anim ())
         g_scene->animator ()->pose (pose, 64);
     else

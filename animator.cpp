@@ -100,9 +100,10 @@ void Animator::pose (Matrix *pose, uint32_t num)
                          1.0);
         if (0 == i)
         {
-            //t += _anim->position ()[frame];
+            t += _anim->position ()[frame];
+            t.x = 0;
         }
-        else
+
         {
             auto keys = _anim->rotation ()[_anim->remap[bones[index.id]->handle]];
             if (nullptr != keys)
@@ -110,6 +111,7 @@ void Animator::pose (Matrix *pose, uint32_t num)
                 r = keys[frame];
             }
         }
+
 
         if (index.parent < 0)
         {
