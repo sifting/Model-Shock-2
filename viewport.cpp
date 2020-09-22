@@ -217,10 +217,11 @@ void Viewport::draw ()
         {
             auto mesh = meshes[i];
 
+            glBindVertexArray (_vaos[i]);
+
             glActiveTexture (GL_TEXTURE0);
             _textures[mesh->slot]->bind ();
 
-            glBindVertexArray (_vaos[i]);
             glDrawElements (GL_TRIANGLES,
                             mesh->nindices,
                             GL_UNSIGNED_SHORT,

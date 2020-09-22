@@ -18,7 +18,7 @@ Model::from_file (std::string& path, std::string& prefix, Skel *skel)
     {
         return nullptr;
     }
-    if (h.version != 2)
+    if (h.version != 2 && h.version != 1)
     {
         return nullptr;
     }
@@ -31,9 +31,19 @@ Model::from_file (std::string& path, std::string& prefix, Skel *skel)
     fseek (fp, h.segs, SEEK_SET);
     fread (segs, sizeof (segs[0]), h.nsegs, fp);
 
-    auto mats = new Material[h.nmats];
     fseek (fp, h.mats, SEEK_SET);
-    fread (mats, sizeof (mats[0]), h.nmats, fp);
+    /*Digest materials into something usable*/
+    std::vector<MyMaterial *> mymats;
+    for (auto i = 0u; i < h.nmats; i++)
+    {
+        MyMaterial *mat = new MyMaterial;
+        Material tmp;
+        fread (&tmp, 0x1c + ((1 == h.version) ? 0xc : 0x1c), 1, fp);
+        mat->path = prefix + "/txt16/" + tmp.name;
+        mat->alpha = tmp.alpha;
+        mat->emissive = tmp.emissive;
+        mymats.push_back (mat);
+    }
 
     auto tris = new Tri[h.ntris];
     fseek (fp, h.tris, SEEK_SET);
@@ -51,17 +61,6 @@ Model::from_file (std::string& path, std::string& prefix, Skel *skel)
     fseek (fp, h.chunks, SEEK_SET);
     fread (chunks, sizeof (chunks[0]), h.nchunks, fp);
     fclose (fp);
-
-    /*Digest materials into something usable*/
-    std::vector<MyMaterial *> mymats;
-    for (auto i = 0u; i < h.nmats; i++)
-    {
-        MyMaterial *mat = new MyMaterial;
-        mat->path = prefix + "/txt16/" + mats[i].name;
-        mat->alpha = mats[i].alpha;
-        mat->emissive = mats[i].emissive;
-        mymats.push_back (mat);
-    }
 
     /*Digest model data into something usable*/
     std::vector<Mesh *> meshes;
@@ -173,7 +172,6 @@ Model::from_file (std::string& path, std::string& prefix, Skel *skel)
     delete [] uvs;
     delete [] verts;
     delete [] tris;
-    delete [] mats;
 
     return mdl;
 }

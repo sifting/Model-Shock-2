@@ -103,7 +103,7 @@ private: /*Dark structs*/
         uint32_t caps;
         float alpha;
         float emissive;
-        uint8_t unk3[28];
+        uint8_t unk3[0x1c];
     };
     struct UV
     {
